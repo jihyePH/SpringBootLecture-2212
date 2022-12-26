@@ -3,12 +3,17 @@ package com.mulcam.demo.controller;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
+@RequestMapping("/basic")
 public class BasicController {
 
 	@RequestMapping("/basic")
@@ -32,4 +37,26 @@ public class BasicController {
 		return "basic/basic2";
 	}
 	
+	// parameter 패싱
+	@RequestMapping("/basic3")
+	public String basic3(@RequestParam(name="id", defaultValue = "1")String id) {
+		System.out.println("id : " + id);
+		return "redirect:/basic/basic" + id;	//Redirection
+	}
+	
+	
+	// Servlet에서는 안되던 방식
+	@RequestMapping("/basic4/{id}")
+	public String baisc4(@PathVariable int id) {
+		System.out.println("id : " + id);
+		return "redirect:/basic/basic" + id;	//Redirection
+	}
+	
+	// 기존 방식
+	@RequestMapping("/basic5")	
+	public String basic5(HttpServletRequest req) {
+		String id = req.getParameter("id");
+		System.out.println("id : " + id);
+		return "redirect:/basic/basic" + id;	//Redirection
+	}
 }
