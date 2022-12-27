@@ -64,6 +64,13 @@
 			    <version>0.4</version>
 			</dependency>
 
+		<!-- https://mvnrepository.com/artifact/org.springframework.session/spring-session-core -->
+		<dependency>
+		    <groupId>org.springframework.session</groupId>
+		    <artifactId>spring-session-core</artifactId>
+		</dependency>
+
+
 	</dependencies>
 
 	<build>
