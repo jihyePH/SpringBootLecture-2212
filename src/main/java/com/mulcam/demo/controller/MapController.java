@@ -6,6 +6,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.mulcam.demo.entity.StaticMap;
+import com.mulcam.demo.service.CsvUtil;
+import com.mulcam.demo.service.MapUtil;
 
 @Controller
 @RequestMapping("/map")
@@ -88,6 +92,8 @@ public class MapController {
 		JSONObject object = (JSONObject) parser.parse(sb.toString());
 		JSONObject results = (JSONObject) object.get("results");
 		JSONArray juso = (JSONArray) results.get("juso");
+		if (juso == null || juso.size() == 0)
+			return null;
 		JSONObject jusoItem = (JSONObject) juso.get(0);
 		String roadAddr = (String) jusoItem.get("roadAddr");
 		
@@ -132,6 +138,58 @@ public class MapController {
 		Double lat = Double.parseDouble(lat_);
 		
 		return "경도: " + lng + ", 위도: " + lat;
+	}
+	
+	@GetMapping("/hotPlaces")
+	public String hotPlaces() throws Exception {
+		String[] hotPlaces = {"광진구청", "건국대학교", "세종대학교", "워커힐호텔"};
+		String filename = "c:/Temp/광진구명소.csv";
+		MapUtil mu = new MapUtil();
+		
+		String output = "";
+		List<List<String>> dataList = new ArrayList<>();
+		for (String place: hotPlaces) {
+			List<String> row = new ArrayList<>();
+			String roadAddr = mu.getRoadAddr(place, roadAddrKey);
+			output += roadAddr + "<br>";
+			List<String> geocode = mu.getGeocode(roadAddr, accessId, secretKey);
+			row.add(place);
+			row.add(roadAddr);
+			row.add(geocode.get(0));		// Longitude(경도)
+			row.add(geocode.get(1)); 		// Latitude(위도)
+			dataList.add(row);
+		}
+		
+		CsvUtil cu = new CsvUtil();
+		cu.writeCsv(filename, dataList);
+		return "redirect:/map/hotPlacesResult";
+	}
+	
+	@GetMapping("/hotPlacesResult")
+	public String hotPlacesResult(Model model) throws Exception {
+		CsvUtil cu = new CsvUtil();
+		List<List<String>> dataList = cu.readCsv("c:/Temp/광진구명소.csv");
+		String marker = "";
+		double lngSum = 0.0, latSum = 0.0;
+		// "type:t|size:tiny|pos:127.0824 37.5383|label:광진구청|color:red"
+		for (List<String> list: dataList) {
+			double lng = Double.parseDouble(list.get(2));
+			double lat = Double.parseDouble(list.get(3));
+			lngSum += lng; latSum += lat;
+			marker += "&markers=type:t|size:tiny|pos:" + lng + "%20" + lat + "|label:"
+					+ URLEncoder.encode(list.get(0), "utf-8") + "|color:red";
+		}
+		double lngCenter = lngSum / dataList.size();
+		double latCenter = latSum / dataList.size();
+		String url = "https://naveropenapi.apigw.ntruss.com/map-static/v2/raster"
+				+ "?w=" + 600 + "&h=" + 400
+				+ "&center=" + lngCenter + "," + latCenter
+				+ "&level=" + 12 + "&scale=" + 2
+				+ "&X-NCP-APIGW-API-KEY-ID=" + accessId
+				+ "&X-NCP-APIGW-API-KEY=" + secretKey;
+		
+		model.addAttribute("url", url+marker);
+		return "map/staticResult";
 	}
 	
 }
