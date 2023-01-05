@@ -25,10 +25,10 @@ public class MapUtil {
 		keyword = URLEncoder.encode(keyword, "utf-8");
 		String apiUrl = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 						+ "?confmKey=" + roadAddrKey
-						+ "&currentPage=" + currentPage
-						+ "&countPerPage=" + countPerPage
-						+ "&keyword=" + keyword
-						+ "&resultType=" + resultType;
+						+ "&currentPage=" + currentPage		// 페이지 번호
+						+ "&countPerPage=" + countPerPage	// 페이지당 출력할 결과 row수
+						+ "&keyword=" + keyword				// keyword : 주소검색어
+						+ "&resultType=" + resultType;		// 검색결과 형식 설정(JSON)
 		
 		URL url = new URL(apiUrl);
 		BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream(), "utf-8"));

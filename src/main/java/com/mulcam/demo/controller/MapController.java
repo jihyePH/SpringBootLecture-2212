@@ -12,6 +12,7 @@ import java.util.List;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,22 +24,25 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.mulcam.demo.entity.StaticMap;
 import com.mulcam.demo.service.CsvUtil;
+import com.mulcam.demo.service.CsvUtilImpl;
 import com.mulcam.demo.service.MapUtil;
 
 @Controller
 @RequestMapping("/map")
 public class MapController {
 
+	@Autowired private CsvUtil csvUtil;
 	@Value("${naver.accessId}") private String accessId;
 	@Value("${naver.secretKey}") private String secretKey;
 	@Value("${roadAddrKey}") private String roadAddrKey;
 	
-	@GetMapping("/staticMap")
+	@GetMapping("/staticMap")  	// localhost:8080/map/staticMap
 	public String staticForm() {
-		return "map/staticForm";
+		return "map/staticForm"; 	// return을 web화면에 출력
 	}
 	
 	@PostMapping("/staticMap")
+	// entity -> StaticMap.java
 	public String staticMap(StaticMap map, Model model) throws UnsupportedEncodingException {
 		String url = "https://naveropenapi.apigw.ntruss.com/map-static/v2/raster"
 					+ "?w=" + map.getWidth()
@@ -52,11 +56,11 @@ public class MapController {
 					+ "&X-NCP-APIGW-API-KEY-ID=" + accessId
 					+ "&X-NCP-APIGW-API-KEY=" + secretKey;
 		
-		String marker = "type:d|size:mid|pos:127.0724 37.5383";
+		String marker = "type:d|size:mid|pos:127.0724 37.5383"; 	// 1.건대입구 초록위치표시(127.0724)
 		marker = URLEncoder.encode(marker, "utf-8");
 		url += "&markers=" + marker;
 
-		marker = "type:t|size:tiny|pos:127.0824 37.5383|label:광진구청|color:red";
+		marker = "type:t|size:tiny|pos:127.0824 37.5383|label:광진구청|color:red";	//2.지도 광진구청 빨간마크표시(127.0824)
 		marker = URLEncoder.encode(marker, "utf-8");
 		url += "&markers=" + marker;
 		
@@ -67,13 +71,13 @@ public class MapController {
 	@ResponseBody
 	@GetMapping("/roadAddr/{keyword}")
 	public String roadAddr(@PathVariable String keyword) throws Exception {
-		int currentPage = 1;
-		int countPerPage = 10;
-		String resultType = "json";
-		keyword = URLEncoder.encode(keyword, "utf-8");
+		int currentPage = 1;			// currentPage :현재페이지번호
+		int countPerPage = 10;			// countPerpage : 페이지당 출력 할 결과 Row 수
+		String resultType = "json"; 			// resultType : 검색결과 형식설정(JSON)
+		keyword = URLEncoder.encode(keyword, "utf-8");		// keyword : 주소검색어
 		String apiUrl = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
-						+ "?confmKey=" + roadAddrKey
-						+ "&currentPage=" + currentPage
+						+ "?confmKey=" + roadAddrKey		// 처음에만 ?
+						+ "&currentPage=" + currentPage		// 2번째 이상은 &
 						+ "&countPerPage=" + countPerPage
 						+ "&keyword=" + keyword
 						+ "&resultType=" + resultType;
@@ -83,9 +87,9 @@ public class MapController {
 		StringBuffer sb = new StringBuffer();
 		String line = null;
 		
-		while((line = br.readLine()) != null)
+		while((line = br.readLine()) != null)	// BufferedReader : readLine() 데이터를 라인 단위로 읽음(String)
 			sb.append(line);
-		br.close();
+		br.close(); 			//입출력 끝난 후 닫아주기
 		
 		// JSON 데이터에서 원하는 값 추출하기
 		JSONParser parser = new JSONParser();
@@ -160,15 +164,67 @@ public class MapController {
 			dataList.add(row);
 		}
 		
-		CsvUtil cu = new CsvUtil();
-		cu.writeCsv(filename, dataList);
+//		CsvUtilImpl cu = new CsvUtilImpl();
+		csvUtil.writeCsv(filename, dataList);
 		return "redirect:/map/hotPlacesResult";
 	}
 	
 	@GetMapping("/hotPlacesResult")
 	public String hotPlacesResult(Model model) throws Exception {
-		CsvUtil cu = new CsvUtil();
-		List<List<String>> dataList = cu.readCsv("c:/Temp/광진구명소.csv");
+//		CsvUtilImpl cu = new CsvUtilImpl();
+		List<List<String>> dataList = csvUtil.readCsv("c:/Temp/광진구명소.csv");
+		String marker = "";
+		double lngSum = 0.0, latSum = 0.0;
+		// "type:t|size:tiny|pos:127.0824 37.5383|label:광진구청|color:red"
+		for (List<String> list: dataList) {
+			double lng = Double.parseDouble(list.get(2));
+			double lat = Double.parseDouble(list.get(3));
+			lngSum += lng; latSum += lat;
+			marker += "&markers=type:t|size:tiny|pos:" + lng + "%20" + lat + "|label:"
+					+ URLEncoder.encode(list.get(0), "utf-8") + "|color:red";
+		}
+		double lngCenter = lngSum / dataList.size();
+		double latCenter = latSum / dataList.size();
+		String url = "https://naveropenapi.apigw.ntruss.com/map-static/v2/raster"
+				+ "?w=" + 600 + "&h=" + 400
+				+ "&center=" + lngCenter + "," + latCenter
+				+ "&level=" + 12 + "&scale=" + 2
+				+ "&X-NCP-APIGW-API-KEY-ID=" + accessId
+				+ "&X-NCP-APIGW-API-KEY=" + secretKey;
+		
+		model.addAttribute("url", url+marker);
+		return "map/staticResult";
+	}
+	
+	@GetMapping("/homePlaces")
+	public String homePlaces() throws Exception {
+		String[] homePlaces = {"영동족발", "서초보건소", "파리바게뜨"};
+		String filename = "c:/Temp/양재명소.csv";
+		MapUtil mu = new MapUtil();
+		
+		String output = "";
+		List<List<String>> dataList = new ArrayList<>();
+		for (String place: homePlaces) {
+			List<String> row = new ArrayList<>();
+			String roadAddr = mu.getRoadAddr(place, roadAddrKey);
+			output += roadAddr + "<br>";
+			List<String> geocode = mu.getGeocode(roadAddr, accessId, secretKey);
+			row.add(place);
+			row.add(roadAddr);
+			row.add(geocode.get(0));		// Longitude(경도)
+			row.add(geocode.get(1)); 		// Latitude(위도)
+			dataList.add(row);
+		}
+		
+		CsvUtilImpl cu = new CsvUtilImpl();
+		cu.writeCsv(filename, dataList);
+		return "redirect:/map/homePlacesResult";
+	}
+	
+	@GetMapping("/homePlacesResult")
+	public String homePlacesResult(Model model) throws Exception {
+//		CsvUtilImpl cu = new CsvUtilImpl();
+		List<List<String>> dataList = csvUtil.readCsv("c:/Temp/양재명소.csv");
 		String marker = "";
 		double lngSum = 0.0, latSum = 0.0;
 		// "type:t|size:tiny|pos:127.0824 37.5383|label:광진구청|color:red"
