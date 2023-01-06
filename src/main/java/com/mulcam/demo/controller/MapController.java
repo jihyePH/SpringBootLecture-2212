@@ -142,6 +142,7 @@ public class MapController {
 		Double lat = Double.parseDouble(lat_);
 		
 		return "경도: " + lng + ", 위도: " + lat;
+		// 경도: 127.082375, 위도: 37.538617
 	}
 	
 	@GetMapping("/hotPlaces")
