@@ -6,9 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.mulcam.demo.crawling.Crawling;
+import com.mulcam.demo.crawling.FireStation;
 import com.mulcam.demo.crawling.Genie;
 import com.mulcam.demo.crawling.Interpark;
 
@@ -33,6 +35,7 @@ public class CrawlingController {
 		model.addAttribute("songList", list);
 		return "crawling/genie";
 	}
+	
 	@GetMapping("/genie2")
 	public String genie2(Model model) throws Exception {
 		Crawling crawling = new Crawling();
@@ -41,4 +44,15 @@ public class CrawlingController {
 		return "crawling/genie2";
 	}
 	
+	@GetMapping("/fireStation")
+	public String fireStationSpinner(){
+		return "crawling/fireStationSpinner";
+	}
+	
+	@PostMapping("/fireStation")
+	public String fireStation(Model model) throws Exception {
+		List<FireStation> list = crawling.fireStation();
+		model.addAttribute("stationList", list);
+		return "crawling/fireStation";
+	}
 }
